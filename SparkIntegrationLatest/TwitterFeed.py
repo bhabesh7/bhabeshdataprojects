@@ -35,10 +35,10 @@ class TweetsListener(StreamListener):
 def connect_to_twitter(connection, tracks):
     #bhabeshtweetapp at developer.twitter.com
     #app name -> bhabesh83app
-    api_key ="Lef07eX2QRBAqq9sHPu66UBs7"
-    api_secret="wjnVXaUi8CMkypwlR23HwWobL7Ss9PaUVJODA55FFSXAVtrBme"
-    access_token="858757474240704512-TZzQuPXO3eR6keunVcbpZWu5d5NshUM"
-    access_token_secret="EJbnjpf7oQUC2avZgXJ8GdPWP5KqybW1iUqEwqY3SWbNN"
+    api_key =""
+    api_secret=""
+    access_token=""
+    access_token_secret=""
     auth =OAuthHandler(api_key, api_secret)
     auth.set_access_token(access_token,access_token_secret)
     twitter_stream = Stream(auth, TweetsListener(connection))
