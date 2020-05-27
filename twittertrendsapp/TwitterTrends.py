@@ -2,7 +2,7 @@
 # Date: 21-03-2020
 #Libs: Tweepy, pandas, numpy, matplotlib, beautifulsoup4, textblob
 # Credits to https://www.youtube.com/watch?v=rhBZqEWsZU4&t=967s and relatedvideos
-# Purpose: Get Twitter feeds and stream it through a socket so that spark can process it.
+# Purpose: Get tweets of user and perform sentiment and trend analysis
 # python3 TwitterTrends.py <user>
 
 import sys
@@ -15,6 +15,7 @@ from bs4 import BeautifulSoup
 import os
 from textblob import TextBlob
 import re
+import Constant
 
 # from contextlib import closing
 
@@ -48,6 +49,9 @@ class TwitterClient:
             tweetlist.append(tweet)
         return tweetlist
 
+    def get_followers_count(self):
+        tuser = self.twitter_client.get_user(self.twitter_user)
+        return tuser.followers_count
 
 class TweetsListener(StreamListener):
     def __init__(self):
@@ -71,13 +75,11 @@ class TweetsListener(StreamListener):
 
 
 class TwitterAuthenticate:
-    def authenticate(self):
-        # bhabeshtweetapp at developer.twitter.com
-        # app name -> bhabesh83app
-        api_key = ""
-        api_secret = ""
-        access_token = ""
-        access_token_secret = ""
+    def authenticate(self):       
+        api_key = Constant.TWITTER_API_KEY
+        api_secret = Constant.TWITTER_API_SECRET
+        access_token = Constant.TWITTER_ACCESS_TOKEN
+        access_token_secret = Constant.TWITTER_ACCESS_TOKEN_SECRET
         auth = OAuthHandler(api_key, api_secret)
         auth.set_access_token(access_token, access_token_secret)
         return auth
@@ -118,7 +120,6 @@ class TweetAnalysis:
     def clean_tweet(self, tweet):
         return ' '.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)", " ", tweet).split())
 
-
 if __name__ == "__main__":
     if (len(sys.argv) < 2):
         print("invalid args provided. usage -> python3 TwitterFeed.py <user>", file=sys.stderr)
@@ -132,8 +133,11 @@ if __name__ == "__main__":
     # tweetslist = client.get_user_timeline_tweets(10)
     # print(tweetslist)
     api = client.get_twitter_client_api()
-    tweets = api.user_timeline(screen_name=user, count=20)
-    print(dir(tweets[0]))
+    followers_count = client.get_followers_count()
+    print("followers " + str(followers_count))
+    tweets = api.user_timeline(screen_name=user, count=Constant.NUM_TWEETS)
+    if len(tweets) or 0:
+        print(dir(tweets[0]))
     tweet_analysis = TweetAnalysis()
     df = tweet_analysis.tweet_to_dataframe(tweets)
     df['sentiment'] = np.array([tweet_analysis.get_tweet_sentiment(tweet) for tweet in df['tweets']])
@@ -160,8 +164,14 @@ if __name__ == "__main__":
 
     htmlDoc = open(tempfile).read()
     soup= BeautifulSoup(htmlDoc, features='html.parser')
+    title="Latest "+ str(Constant.NUM_TWEETS) + " tweets of @" + user +" [Followers " + str(followers_count) + "]"
+
+    title_tag = soup.new_tag('h1')
+    title_tag.string = title
     img_tag = soup.new_tag('img', src=basefilename + ".png")
-    soup.insert(0, img_tag)
+    soup.insert(0, title_tag)
+    soup.insert(1, img_tag)
+
     html_new = soup.prettify('utf-8')
 
     with open(basefilename + ".html", "wb") as basefile:
