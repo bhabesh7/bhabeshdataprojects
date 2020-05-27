@@ -1,6 +1,6 @@
 # Author: Bhabesh Acharya
 # Date: 21-03-2020
-#Libs: Tweepy, pandas, numpy, matplotlib
+#Libs: Tweepy, pandas, numpy, matplotlib, beautifulsoup4, textblob
 # Credits to https://www.youtube.com/watch?v=rhBZqEWsZU4&t=967s and relatedvideos
 # Purpose: Get Twitter feeds and stream it through a socket so that spark can process it.
 # python3 TwitterTrends.py <user>
@@ -11,6 +11,10 @@ import json
 import pandas as pd
 import numpy as np
 from tweepy import Cursor, API
+from bs4 import BeautifulSoup
+import os
+from textblob import TextBlob
+import re
 
 # from contextlib import closing
 
@@ -21,6 +25,7 @@ from tweepy.streaming import StreamListener
 import matplotlib.pyplot as plt
 # import tkinter
 # import matplotlib
+
 
 #This is to enable UI mode for python
 # matplotlib.use('TkAgg')
@@ -34,6 +39,7 @@ class TwitterClient:
     def get_twitter_client_api(self):
         return self.twitter_client
 
+    # Cursor method in Tweepy api
     def get_user_timeline_tweets(self, num_tweets):
         tweetlist = []
         # sample
@@ -99,13 +105,26 @@ class TweetAnalysis:
         # dframe['retweets'] = pd.DataFrame(data=[tweet.retweet_count for tweet in tweets], columns=['likes'])
         return dframe
 
+    def get_tweet_sentiment(self, tweet):
+        sent = TextBlob(self.clean_tweet(tweet))
+        polarity, subjectivity = sent.sentiment
+        if polarity >0:
+            return 1
+        elif polarity == 0:
+            return 0
+        elif polarity <0:
+            return -1
+
+    def clean_tweet(self, tweet):
+        return ' '.join(re.sub("(@[A-Za-z0-9]+)|([^0-9A-Za-z \t])|(\w+:\/\/\S+)", " ", tweet).split())
+
 
 if __name__ == "__main__":
     if (len(sys.argv) < 2):
         print("invalid args provided. usage -> python3 TwitterFeed.py <user>", file=sys.stderr)
         exit(-1)
     user = sys.argv[1]
-    # user = sys.argv[2]
+    # user = "sachin_rt"
     # tracks="covid19"
     # user="sachin_rt"
     print("user %s", user)
@@ -113,10 +132,12 @@ if __name__ == "__main__":
     # tweetslist = client.get_user_timeline_tweets(10)
     # print(tweetslist)
     api = client.get_twitter_client_api()
-    tweets = api.user_timeline(screen_name=user, count=10)
+    tweets = api.user_timeline(screen_name=user, count=20)
     print(dir(tweets[0]))
     tweet_analysis = TweetAnalysis()
     df = tweet_analysis.tweet_to_dataframe(tweets)
+    df['sentiment'] = np.array([tweet_analysis.get_tweet_sentiment(tweet) for tweet in df['tweets']])
+
     print(df.head(5))
 
     print('max likes ', np.max(df['likes']))
@@ -129,13 +150,25 @@ if __name__ == "__main__":
 
     # will need tkinter fix for plt.show() to work fine
     # plt.show()
-    file = user+"_tweets"
-    plt.savefig(file+".png")
+    basefilename = user + "_tweets"
+    tempfile = basefilename + "_temp.html"
+    plt.savefig(basefilename + ".png")
 
     #sort by likes in descending order
     df.sort_values(by=['likes', 'retweets'], inplace=True, ascending=False)
-    df.to_html(file+".html")
-    print("trend saved successfully ", file)
+    dfhtml=df.to_html(tempfile)
+
+    htmlDoc = open(tempfile).read()
+    soup= BeautifulSoup(htmlDoc, features='html.parser')
+    img_tag = soup.new_tag('img', src=basefilename + ".png")
+    soup.insert(0, img_tag)
+    html_new = soup.prettify('utf-8')
+
+    with open(basefilename + ".html", "wb") as basefile:
+        basefile.write(html_new)
+    os.remove(tempfile)
+    print("Twitter trend saved successfully ", basefilename)
+
     # old way
     # twitterFeed = TwitterStreamer()
     # twitterFeed.connect_to_twitter(tracks)
