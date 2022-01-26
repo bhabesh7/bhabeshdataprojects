@@ -1,0 +1,31 @@
+This link desccries how we can load custom code (non specific to a model and still invoke it using same mlflow paradigms and execute it)
+https://mlflow.org/docs/latest/models.html
+
+
+The below link describes the signature formats used in models
+https://mlflow.org/docs/latest/models.html#model-signature-and-input-example
+
+
+able to run an experiment run from git (provided MLProject is at the root). Please check the link
+https://mlflow.org/docs/latest/tutorials-and-examples/tutorial.html
+
+
+#This is the command to start mlflow server backed by backend sqlite3 metastore and artifacts store as local file system
+mlflow server --backend-store-uri sqlite:///mydb.sqlite --default-artifact-root file:///home/bhabesh/Bhabesh/programming/python/mlflowtest/mlruns/
+
+
+#similarly this is the command to start mlflow ui with backend store and defaut-artifact root. Only when you start ui with this mode
+#you will see registered models
+mlflow ui --backend-store-uri sqlite:///mydb.sqlite --default-artifact-root file:///home/bhabesh/Bhabesh/programming/python/mlflowtest/mlruns/
+mlflow ui --backend-store-uri sqlite:///mydb.sqlite --default-artifact-root file:///home/bhabesh/Bhabesh/programming/AI/mlflow_proj/mlruns/
+
+
+#command for real time serving for model
+mlflow models serve -m /home/bhabesh/Bhabesh/programming/python/mlflowtest/mlruns/0/13a496f740ad4611a69fc71e0dc201a0/artifacts/model -p 1889
+
+
+curl -X POST -H "Content-Type:applic
+ation/json; format=pandas-split" --data '{"columns":["alcohol", "chlorides", "citric acid", "density", "fixed acidity", "free sulfur dioxide", "pH", "residual sugar", "sulphates", "total sulfur dioxide", "volatile acidity"],"data":[[12.8, 0.029, 0.48, 0.98, 6.2, 29, 3.33, 1.2, 0.39, 75, 0.66]]}' http://127.0.0.1:1888/invocations
+
+
+
